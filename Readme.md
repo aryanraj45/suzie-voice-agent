@@ -32,4 +32,4 @@ The primary challenge was managing **asynchronous data persistence**. Occasional
 Check out the live demo of the agent in action: [Watch on YouTube](https://youtu.be/FbwpecrA5zc)
 
 ---
-*Developed during my internship for Shijos Hair Beauty, Melbourne.*
+*Developed during my internship for Suzie McIntosh Brows, Melbourne.*
