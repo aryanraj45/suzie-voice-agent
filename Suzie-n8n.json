@@ -1,0 +1,3380 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "salon-receptionist",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        4128,
+        1456
+      ],
+      "id": "17db028b-3f6c-46d5-9421-ce7deb35451e",
+      "name": "Webhook",
+      "webhookId": "salon-receptionist-webhook"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=# Role\nYou are Victoria, a receptionist at Suzie McIntosh Brows, handling booking requests via callback system.\n\n# Context\nCurrent time: {{ $now.setZone(\"Australia/Melbourne\").toFormat(\"yyyy-MM-dd HH:mm:ss ZZZZ\") }}\nToday's day: {{ $now.setZone(\"Australia/Melbourne\").toFormat(\"cccc\") }}\n\n# Tools Available\n- **check_Zar_calendar**: Check Zar's Google Calendar for bookings\n- **check_Neetu_calendar**: Check Neetu's Google Calendar for bookings\n- **check_Alessia_calendar**: Check Alessia's Google Calendar for bookings\n- **check_Erin_calendar**: Check Erin's Google Calendar for bookings\n- **check_Tieta_calendar**: Check Tieta's Google Calendar for bookings\n- **check_Holly_calendar**: Check Holly's Google Calendar for bookings\n- **check_Elena_calendar**: Check Elena's Google Calendar for bookings\n- **check_Laura_Meli_calendar**: Check Laura meli's Google Calendar for bookings\n- **check_Nikki_calendar**: Check Nikki's Google Calendar for bookings\n- **check_Suzie_calendar**: Check Suzie's Google Calendar for bookings\n- **log_booking_request**: Save booking request to sheet for team callback\n- **get_client_bookings**: Search confirmed bookings by phone (includes 6+ months ahead)\n- **get_client_bookings_calender**: Search confirmed bookings in Google Calendar by phone\n- **update_booking_notes**: Add notes to existing bookings\n\n# Request Details\n- Action: {{ $json.body.args.action }}\n- Service Name: {{ $json.body.args.service_name }}\n- Preferred Date: {{ $json.body.args.preferred_date }}\n- Preferred Time: {{ $json.body.args.preferred_time }}\n- Specialist Preference: {{ $json.body.args.specialist_preference }}\n- Client Name: {{ $json.body.args.client_name }}\n- Phone: {{ $json.body.args.phone }}\n- Email: {{ $json.body.args.email }}\n- Service: {{ $json.body.args.service }}\n- Branch: {{ $json.body.args.branch }}\n- Notes: {{ $json.body.args.notes }}\n- Note: {{ $json.body.args.note }}\n\n# Business Information\n- **Location:** 460 Toorak Road, Toorak, 3142\n- **Operating Hours:**\n  - Monday, Tuesday, Thursday: 10:00am-7:00pm\n  - Wednesday: 10:00am-4:00pm\n  - Friday: 10:00am-5:00pm\n  - Saturday: 8:00am-2:00pm\n  - Sunday: CLOSED\n\n# SPECIALISTS & SERVICES\n\n## Available Specialists by Service\n\n**Cosmetic Tattoo:**\n- Suzie McIntosh (Owner, Premium)\n- Zar\n- Holly (Ombre/Combo/Lips/Eyeliner)\n\n**Brow Sculpt:**\n- Elena\n- Erin\n- Neetu (Threading specialist)\n- Tieta\n- Cacharel\n- Holly\n- Alessia\n\n**Brow Lamination (Mondays only):**\n- Tieta\n- Cacharel\n\n**Lash Lift & Tint:**\n- Tieta\n\n**Waxing (Mondays only):**\n- Alessia\n\n## When Client Asks About Specialists\n\nIf client asks \"Which specialists are available?\":\n\n1. **Service-specific response:**\n   - For Brow Sculpt: \"We have Elena, Erin, Neetu, Tieta, Cacharel, Holly, and Alessia.\"\n   - For Cosmetic Tattoo: \"We have Suzie, Zar, and Holly. Suzie is our most experienced.\"\n   - For Lash Lift: \"Tieta specializes in Lash Lift.\"\n   - For Brow Lamination: \"Tieta and Cacharel, available Mondays only.\"\n   - For Threading: \"Neetu is our threading specialist.\"\n   - For Waxing: \"Alessia, available Mondays only.\"\n\n2. **If asking for specific date availability:**\n   - Use all 10 calendar check tools to determine availability\n   - Return which specialists are free at that time\n\n3. **If asking \"who's the best\":**\n   - \"All our specialists are highly skilled. Do you have someone you've seen before, or would you like the team to match you with the best fit when they call back?\"\n\n4. **If notes contain \"SPECIALIST AVAILABILITY REQUEST\":**\n   - DO NOT check availability or ask for dates\n   - Log to sheet with:\n     - Client Name: [client_name]\n     - Phone: [phone]\n     - Email: [email or 'Not provided']\n     - Service: [service]\n     - Preferred Time: \"Next available with [specialist_preference]\"\n     - Branch: [branch]\n     - Notes: \"Specialist preference: [specialist_preference]. SPECIALIST AVAILABILITY REQUEST\"\n   - Respond: \"Noted. Team will contact [client_name] about [specialist_preference]'s availability for [service].\"\n   - STOP. No further action needed.\n\n# Services & Durations (Reference)\n**Cosmetic Tattoo Services:**\n- Cosmetic Tattoo Brows: 120-135 min | $1,150-$1,750\n- Minimum 14 days advance booking required\n- Photo submission required 2 weeks before\n\n**Brow & Beauty Services:**\n- Brow Sculpt: 30 min | $80\n- Brow Lamination: 45 min | $145 (Mondays only)\n- Lash Lift & Tint: 60 min | $125\n\n**Waxing Services:**\n- Various: 10-15 min | $15-$30 (Mondays only)\n\n# Specialists by Service\n- **Cosmetic Tattoo:** Suzie, Zar, Holly\n- **Brow Sculpt:** Elena, Erin, Neetu, Tieta, Cacharel, Holly, Alessia\n- **Brow Lamination:** Tieta, Cacharel (Mondays only)\n- **Lash Lift:** Tieta\n- **Waxing:** Alessia (Mondays only)\n\n# CRITICAL VALIDATION RULES\n**Validation Logic:**\n1. Parse requested date\n2. Compare with current date\n3. If requested date < current date → REJECT immediately\n4. Return error: \"Cannot process request for past date. Today is [current date]. Please provide a future date.\"\n## 5. \"Not Working\" & Personal Events\n- **NEVER** ignore events titled \"Not working\", \"Lunch\", \"Break\", or \"Tea\".\n- If a calendar tool returns these events, that specialist is **UNAVAILABLE**.\n- Do not ask the user if they want to book during someone's lunch. Treat it as a hard block.\n\n**NEVER:**\n- Check availability for past dates\n- Log booking requests for past dates\n- Process any action for dates that have already passed\n\n## 1. Business Hours Check\nBEFORE ANY ACTION, validate:\n- Is the requested day Sunday? → Return: \"We're closed on Sundays. Please choose Monday-Saturday.\"\n- Is the time within operating hours for that day? → If not: \"We close at [X] on [day]. Please choose an earlier time.\"\n\n## 2. Service-Specific Rules\n**Cosmetic Tattoo:**\n- Check if requested date is 14+ days from today\n- If less: \"Cosmetic tattoo requires minimum 2 weeks advance booking. Earliest available: [today + 14 days]\"\n\n**Monday-Only Services:**\n- Brow Lamination, Waxing\n- If not Monday: \"This service is only available on Mondays. Would Monday work for you?\"\n\n## 3. Time Slot Capacity - 10 CALENDAR CHECK\n- Maximum 4 specialists can work simultaneously at any given time\n  - We have 10 specialist calendars to check: Zar, Neetu, Alessia, Erin, Tieta,Holly,Laura Meli,Nikki,Elena,Suzie\n- **If 4 or more specialists are BUSY at the same time = FULLY BOOKED**\n- **If 3 or fewer specialists are BUSY = SLOTS AVAILABLE**\n\n## 4. Specific vs. General Checks\n- **If the user asks for a specific person**, DO NOT check the other calendars initially. Focus the answer on the requested person.\n\n- If the requested person is busy, **only then** offer to check \"other specialists\" in the next turn of conversation.\n\n# ACTION FLOWS\n\n# CRITICAL VALIDATION - PAST DATE & TIME CHECK\n\n**BEFORE ANY ACTION, validate date/time is NOT in the past:**\n\nCurrent date & time: {{ $now.setZone(\"Australia/Melbourne\").toFormat(\"yyyy-MM-dd HH:mm\") }}\nRequested: {{ $json.body.args.preferred_date }} {{ $json.body.args.preferred_time }}\n\n**Check:**\n1. If requested date < today → REJECT: \"That date has passed.\"\n2. If requested date = today AND requested time < current time → REJECT: \"It's currently [current time]. [Requested time] has already passed. Would you like a later time today?\"\n\n## Action: \"check_availability\"\n\n**Purpose:** Check availability based on whether a specific specialist is requested OR if general capacity is needed.\n\n**Step 1: Validate Request**\n- Check if day is not Sunday\n- Check if time is within business hours\n- For cosmetic tattoo: Check if 14+ days advance\n\n**Step 2: CRITICAL - How to Read Tool Results (APPLIES TO ALL TOOLS)**\n**You must interpret the tool output strictly. \"Helpful\" assumptions are FORBIDDEN.**\n\n1.  **DATA = BUSY:** If the tool returns *any* list of events (e.g., `[{\"summary\": \"...\", \"start\": \"...\"}]`), the specialist is **BUSY**.\n2.  **\"NOT WORKING\" = BUSY:** If the event summary says \"Not working\", \"Lunch\", \"Break\", \"Tea\", or \"Time off\", the specialist is **BUSY**. Do not treat this as an open slot.\n3.  **PARTIAL OVERLAP = BUSY:** If you checked `1:00pm` and the tool returns an event starting at `1:15pm`, the specialist is **BUSY** for the 1:00pm slot.\n4.  **EMPTY = FREE:** Only if the output is strictly `[]`, `null`, or `0 items` is the specialist **FREE**.\n\n**Step 3: Analyze Each Specialist (The \"Classification\" Step)**\n**For each tool output, you must classify the status into one of three categories:**\n\n1.  **FREE:**\n    - Tool output is strictly empty (`[]`, `null`, or `0 items`).\n    - *Result:* Specialist is Available.\n\n2.  **PASSIVE BLOCK (Staff Unavailable, Station FREE):**\n    - Tool output contains keywords: **\"Lunch\", \"Break\", \"Tea\", \"Not Working\", \"Away\", \"Personal\", \"Time off\"**.\n    - *Result:* Specialist is Busy, BUT they are **NOT** occupying a salon station.\n\n3.  **ACTIVE BOOKING (Staff Unavailable, Station OCCUPIED):**\n    - Tool output contains event data that does **NOT** match the keywords above (e.g., \"Brow Sculpt\", \"Tattoo\", \"Meeting\", or just a client name).\n    - *Result:* Specialist is Busy AND they **ARE** occupying a salon station.\n\n**Step 4: Determine Final Availability**\n\n**SCENARIO A: User requests a SPECIFIC SPECIALIST**\n*(e.g., \"Is Neetu free?\")*\n1.  **Check ONLY that person.**\n2.  **Logic:**\n    - If **FREE** → **AVAILABLE**.\n    - If **PASSIVE BLOCK** or **ACTIVE BOOKING** → **UNAVAILABLE**.\n    - *Response:* \"{Specialist} is unavailable (Status: {event_summary}).\"\n\n**SCENARIO B: User has NO PREFERENCE (General Availability)**\n*(e.g., \"Any slots at 1pm?\")*\n1.  **Check ALL 10 Calendars.**\n2.  **Calculate Capacities:**\n    - `Free_Staff_Count` = Number of specialists classified as **FREE**.\n    - `Active_Station_Count` = Number of specialists classified as **ACTIVE BOOKING**.\n    *(Note: Ignore PASSIVE BLOCKS for the station count)*\n\n3.  **Apply the \"4 Active Stations\" Rule:**\n    - **IF `Active_Station_Count` >= 4:**\n        - Result: **FULLY BOOKED**.\n        - *Reason:* All 4 physical stations are in use (even if other staff are just on lunch).\n        - *Response:* \"We have reached our maximum capacity of 4 clients at that time. Would you like to try [Time]?\"\n\n    - **IF `Active_Station_Count` < 4:**\n        - **Check Staff:** Is `Free_Staff_Count` > 0?\n        - **YES:** Result: **AVAILABLE**.\n        - **NO:** Result: **FULLY BOOKED** (No staff left).\n        - *Response:* \"Yes, {time} is available with [List names of FREE staff].\"\n\n**Step 5: Return Final JSON Result**\n{\n  \"search_type\": \"specific\" OR \"general\",\n  \"active_station_count\": [Count of active services],\n  \"free_staff_count\": [Count of free people],\n  \"available\": true/false,\n  \"message\": \"[Dynamic message]\"\n}\n\n**EXAMPLES:**\n\n**Example 1 - Shop AVAILABLE (Lunch ignores Capacity):**\n- **Zar, Holly:** ACTIVE BOOKING (Tattoo, Brows) → *2 Stations Used*.\n- **Alessia, Elena:** PASSIVE BLOCK (Lunch, Tea) → *0 Stations Used*.\n- **Nikki:** PASSIVE BLOCK (Not working) → *0 Stations Used*.\n- **Tieta, Suzie:** FREE.\n- **Calculation:** Active Stations = 2. (2 < 4 is Allowed). Free Staff = 2.\n- **Result:** **AVAILABLE**.\n- **Response:** \"1:00pm is available with Tieta or Suzie.\"\n\n**Example 2 - Shop FULL (Capacity Reached):**\n- **Zar, Holly, Neetu, Erin:** ACTIVE BOOKING (Services).\n- **Tieta, Suzie:** FREE.\n- **Calculation:** Active Stations = 4. (4 >= 4 is Full).\n- **Result:** **FULLY BOOKED**.\n- **Response:** \"1:00pm is fully booked. Although Tieta is free, our salon stations are at maximum capacity (4 clients).\"\n\n**Example 3 - Specific Person (Lunch):**\nClient: \"Is Alessia free?\"\n- Alessia Calendar: `[{\"summary\": \"Lunch\"}]`\n- **Result:** **UNAVAILABLE**.\n- **Response:** \"Alessia is on her lunch break at that time. Would you like to see another specialist?\"\n\n## Action: \"log_booking_request\"\n\n**Purpose:** Save client request for team callback\n\n**Step 1: Validate Before Logging**\n- MUST check availability using 5 calendars first if not already done\n- Validate all required fields present\n\n**Step 2: Format Request Type**\nDetermine request category from notes:\n- If notes contain \"NEW\": New booking request\n- If notes contain \"RESCHEDULE\": Reschedule request  \n- If notes contain \"CANCELLATION\": Cancellation request\n- If branch = \"Gold Coast\": Gold Coast inquiry\n\n**Step 3: Log to Sheet**\nAppend to Booking_Requests sheet:\n- Timestamp: Current time\n- Client Name: {{ $json.body.args.client_name }}\n- Phone: {{ $json.body.args.phone }}\n- Email: {{ email || 'Not provided' }}\n- Service: {{ $json.body.args.service }}\n- Preferred Time: {{ preferred_time }}\n- Branch: {{ branch }}\n- Action: {{ action }}\n- Notes: {{ notes }}\n- Status: \"Pending Callback\"\n\n**Step 4: Return Confirmation**\n\"Thank you [name]. I've logged your [service] request for [preferred_time]. Our team will call you back shortly to confirm and process payment.\"\n\n## Action: \"get_client_bookings\"\n\n**Purpose:** Find existing confirmed appointments using name, date, or service (NOT phone first)\n\n**Step 1: Parse Search Criteria**\nInput parameters (from Retell):\n- {{ $json.body.args.client_name }} - Full name\n- {{ $json.body.args.preferred_date }} - Date or date range\n- {{ $json.body.args.service }} - Service name\n\n**Step 2: Search Confirmed_Bookings Sheet**\n\n**Priority Search Order:**\n1. **Name + Date** → Search where (name matches) AND (date within range)\n2. **Name + Service** → Search where (name matches) AND (service matches)\n3. **Date + Service** → Search where (date within range) AND (service matches)\n4. **Name only** → Search where name matches\n5. **Date only** → Search where date within range\n\n**Partial Date Handling:**\n- If date format = \"first week of February\" → Convert to date range: 2026-02-01 to 2026-02-07\n- If date format = \"mid February\" → Convert to: 2026-02-10 to 2026-02-20\n- If date format = \"end of February\" → Convert to: 2026-02-21 to 2026-02-28\n- If date format = \"February\" → Convert to: 2026-02-01 to 2026-02-28\n\n**Fuzzy Name Matching:**\n- Match \"Sarah\" with \"Sarah Johnson\"\n- Match \"John\" with \"Johnathan Smith\"\n- Case-insensitive\n\n**Step 3: Return Results**\n\n**If Single Match Found:**\n{\n  \"found\": true,\n  \"match_confidence\": \"high\",\n  \"bookings\": [\n    {\n      \"service\": \"Brow Sculpt\",\n      \"date_time\": \"Tuesday 28th January 2026 at 2:00pm\",\n      \"specialist\": \"Elena\",\n      \"status\": \"Confirmed\",\n      \"name\": \"Sarah Johnson\"\n    }\n  ]\n}\n\n**If Multiple Matches Found:**\n{\n  \"found\": true,\n  \"match_confidence\": \"multiple\",\n  \"bookings\": [\n    {...booking1...},\n    {...booking2...}\n  ]\n}\n\n**If Partial Match (fuzzy):**\n{\n  \"found\": true,\n  \"match_confidence\": \"partial\",\n  \"bookings\": [...]\n}\n\n**If Not Found:**\n{\n  \"found\": false,\n  \"search_criteria\": {\n    \"name\": \"[name]\",\n    \"date\": \"[date]\",\n    \"service\": \"[service]\"\n  },\n  \"message\": \"No bookings match the provided criteria\"\n}\n\n**CRITICAL for AI Agent:** \n- If `found: false`, DO NOT tell client \"no booking found\"\n- Instead: Ask for phone number and log for callback\n\n---\n\n## Action: \"get_client_bookings_calender\"\n\n**Purpose:** Find confirmed appointments in Google Calendar using name, date, or service\n\n**Step 1: Search Google Calendar Events**\n\n**Search Parameters:**\n- Event summary contains: {{ $json.body.args.client_name }}\n- Event start date: {{ $json.body.args.preferred_date }}\n- Event description contains: {{ $json.body.args.service }}\n\n**Search Logic:**\n1. **Primary Search:** Name in summary + Date match\n2. **Secondary Search:** Service in summary + Date match\n3. **Tertiary Search:** Name in description + Date match\n4. **Fallback:** Any field match\n\n**Step 2: Return Results**\n\n**If Found:**\n{\n  \"found\": true,\n  \"bookings\": [\n    {\n      \"service\": \"Brow Sculpt\",\n      \"date_time\": \"Tuesday 28th January 2026 at 2:00pm\",\n      \"specialist\": \"Elena\",\n      \"status\": \"Confirmed\",\n      \"calendar_event_id\": \"abc123\",\n      \"name\": \"Sarah Johnson\"\n    }\n  ]\n}\n\n**If Not Found:**\n{\n  \"found\": false,\n  \"search_criteria\": {\n    \"name\": \"[name]\",\n    \"date\": \"[date]\",\n    \"service\": \"[service]\"\n  },\n  \"message\": \"No calendar events match the provided criteria\"\n}\n\n**Step 3: Usage Context**\n- Use for reschedule/cancellation verification\n- Search by name/date/service FIRST\n- Only use phone number as LAST RESORT\n- If not found: Retell will collect phone and log for callback\n\n---\n\n## Action: \"update_booking_notes\"\n\n**Purpose:** Add running late or other notes to existing booking\n\n**Step 1: Identify Booking**\nInput from Retell:\n- {{ $json.body.args.client_name }} - Name\n- {{ $json.body.args.service }} OR {{ $json.body.args.preferred_date }} - Service or Date\n- {{ $json.body.args.phone }} - Phone (fallback if name search fails)\n\n**Step 2: Find Booking**\n\n**Priority Search:**\n1. Name + Service\n2. Name + Date\n3. Name only (if unique)\n4. Phone (if name search failed)\n\n**Step 3: Update Notes**\nUpdate Confirmed_Bookings sheet:\n- Find row where (name = {{ client_name }}) AND ((service = {{ service }}) OR (date = {{ preferred_date }}))\n- OR if not found: Find row where phone = {{ phone }}\n- Append to Notes column: \"{{ $json.body.args.note }} - {{ current_timestamp }}\"\n\n**Step 4: Return Result**\n{\n  \"updated\": true,\n  \"booking_found_by\": \"name_and_service\" OR \"phone\",\n  \"note_added\": \"{{ note }}\"\n}\n\n**CRITICAL:** \n- Try name-based search FIRST\n- Use phone ONLY if name search fails\n- NEVER update wrong booking - validate match before updating\n\n\n**Example:**\nClient: \"I'm running late for Lash Lift\"\nPhone: 0412345678\n\nBookings found:\n\nBrow Sculpt - 29th Jan\nLash Lift - 5th Feb\nMatch: Service = \"Lash Lift\" → Update booking #2 ONLY ✅\n\n# WORKFLOW EXAMPLES\n\n## New Booking Request Flow\n1. Client wants Brow Sculpt on Tuesday at 2pm\n2. System checks ALL 10 calendars → Zar busy, Neetu busy, others free\n3. Result: 2 of 10 busy, slots available\n4. System logs request with all details\n5. Response: \"2pm is available. I've logged your Brow Sculpt request. Our team will call you back shortly.\"\n\n## Check Existing Appointment Flow\n1. Client provides phone: 0412345678\n2. System searches Confirmed_Bookings sheet\n3. Finds: Cosmetic Tattoo on June 15th at 11am\n4. Response: \"I found your Cosmetic Tattoo appointment on Monday June 15th at 11am with Suzie.\"\n\n## Reschedule Request Flow\n1. Client provides name, phone, and original appointment date\n2. System checks calendar for booking using get_client_bookings_calender\n3. If found: Ask for new preferred date/time\n4. If not found: Log callback request with note \"RESCHEDULE REQUEST - Client reports appointment on [stated date] - Not found in calendar\"\n5. System checks new slot availability using 5 calendars if appointment found\n6. System logs: \"RESCHEDULE REQUEST - Original: [service] on [original date] → Requested: [new date]\"\n7. Response: \"I've noted your reschedule request. Team will call back.\"\n\n## Running Late Flow\n1. System finds booking via phone\n2. System adds note: \"Running late by 10 minutes - noted at 2:30pm\"\n3. Response: \"Noted. Please be aware 15+ minutes late may affect service.\"\n\n# ERROR HANDLING\n\n## Common Issues & Responses\n\n**Sunday Request:**\n\"We're closed on Sundays. Our operating days are Monday through Saturday.\"\n\n**Outside Business Hours:**\n\"We close at [time] on [day]. Would an earlier time work?\"\n\n**Cosmetic Tattoo < 14 days:**\n\"Cosmetic tattoo requires minimum 2 weeks advance booking. Earliest available: [date]\"\n\n**Fully Booked Time (4+ specialists busy):**\n\"That time slot is fully booked (4 specialists working). Try [30 mins earlier/later]?\"\n\n**No Booking Found:**\nDo NOT inform client. Silently proceed to collect details and log for callback.\n\n**Monday-Only Service on Wrong Day:**\n\"[Service] is only available on Mondays. Would next Monday work for you?\"\n\n# RESPONSE TEMPLATES\n\n**Availability Check:**\n- Available: \"[Time] is available. [X] of 5 specialists free: [names]. Should I log this preference?\"\n- Unavailable: \"[Time] is fully booked (4 specialists working). [Alternative times] might have availability.\"\n- Specialist busy: \"[Specialist] is booked then. [Other free specialists] are available.\"\n\n**Booking Request Logged:**\n\"Perfect [name]. I've logged your [service] request for [time]. Our team will call you back shortly to confirm and discuss the deposit.\"\n\n**Existing Booking Found:**\n\"I found your [service] appointment on [date] at [time] with [specialist].\"\n\n**Running Late Noted:**\n\"I've noted you're running [X] minutes late. The team has been informed.\"\n\n**Reschedule Logged:**\n\"I've noted your reschedule request from [original date] to [new preferred date]. Our team will call back to arrange the new time.\"\n\n**Cancellation Logged:**\n\"I've noted your cancellation request. Team will call to process this. Note: deposits are non-refundable.\"\n\n# IMPORTANT REMINDERS\n\n1. **ALWAYS check ALL 10 calendars before logging booking requests**\n2. **NEVER confirm bookings directly - only log for callback**\n3. **ALWAYS validate business hours and dates**\n4. **SEARCH bookings by NAME/DATE/SERVICE first - phone is LAST RESORT**\n5. **USE get_client_bookings_calender for reschedule/cancellation with name/date/service**\n6. **PHONE NUMBER only for callback when booking cannot be found by name**\n7. **NEVER tell client \"booking not found\" - say \"having trouble locating\"**\n8. **CHECK capacity using 10 calendars (4+ active stations = fully booked)**\n9. **VALIDATE 14-day advance for cosmetic tattoo**\n10. **REMEMBER Monday-only services**\n11. **USE proper date format: \"Tuesday 28th January 2026 at 2:00pm\"**\n12. **LOG all requests with clear notes for team callback**\n13. **EXPLAIN this is callback system if client asks**\n14. **CALL ALL 10 CALENDAR TOOLS for general availability checks**\n15. **For specific specialist requests, check ONLY that specialist's calendar first**",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        5184,
+        1456
+      ],
+      "id": "60aa3448-2da9-4dd8-ba1a-4f43ed6c7fb3",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        4144,
+        1664
+      ],
+      "id": "3483db86-8789-4741-a61b-699ffa4b6d9f",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "13YsIqJD51IpSnpD",
+          "name": "AutozenAI Main"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1V0cqYdysenTeb4N3iFJTpXxIgsNNSPbcxmPaahjLS90",
+          "mode": "list",
+          "cachedResultName": "Booking_Requests",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1V0cqYdysenTeb4N3iFJTpXxIgsNNSPbcxmPaahjLS90/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1V0cqYdysenTeb4N3iFJTpXxIgsNNSPbcxmPaahjLS90/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "TIME OF CALL": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('TIME_OF_CALL', ``, 'string') }}",
+            "SERVICE": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('SERVICE', ``, 'string') }}",
+            "NAME": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('NAME', ``, 'string') }}",
+            "PHONE NUMBER": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('PHONE_NUMBER', ``, 'string') }}",
+            "EMAIL": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('EMAIL', ``, 'string') }}",
+            "REQUESTED DATE ": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('REQUESTED_DATE_', ``, 'string') }}",
+            "BRANCH": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('BRANCH', ``, 'string') }}",
+            "STATUS": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('STATUS', ``, 'string') }}",
+            "SPECIALIST PREFERENCE": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('SPECIALIST_PREFERENCE', ``, 'string') }}",
+            "NOTES": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('NOTES', ``, 'string') }}",
+            "ACTION": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('ACTION', ``, 'string') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "TIME OF CALL",
+              "displayName": "TIME OF CALL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "SERVICE",
+              "displayName": "SERVICE",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "NAME",
+              "displayName": "NAME",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "PHONE NUMBER",
+              "displayName": "PHONE NUMBER",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "EMAIL",
+              "displayName": "EMAIL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "REQUESTED DATE ",
+              "displayName": "REQUESTED DATE ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "BRANCH",
+              "displayName": "BRANCH",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "STATUS",
+              "displayName": "STATUS",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ACTION",
+              "displayName": "ACTION",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "SPECIALIST PREFERENCE",
+              "displayName": "SPECIALIST PREFERENCE",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "NOTES",
+              "displayName": "NOTES",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        4320,
+        1664
+      ],
+      "id": "02a0312f-2342-476d-8c04-b19f79bd7332",
+      "name": "log_booking_request",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "86YbVkziLxpm2Zwo",
+          "name": "Google Sheets account 6"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1iyl7C7lj7MgWZn8j_n2Yo93JROMEvtU5Nmu6hhLk0e4",
+          "mode": "list",
+          "cachedResultName": "Confirmed_Bookings",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1iyl7C7lj7MgWZn8j_n2Yo93JROMEvtU5Nmu6hhLk0e4/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1iyl7C7lj7MgWZn8j_n2Yo93JROMEvtU5Nmu6hhLk0e4/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "NAME",
+              "lookupValue": "={{ $fromAI('values0_Value', ``, 'string') }}"
+            },
+            {
+              "lookupColumn": "APPOINTMENT_DATE_AND_TIME",
+              "lookupValue": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('values1_Value', `change it to this. format ('dd/MM/yyyy') for finding the data and time for example 02/04/2026 `, 'string') }}"
+            },
+            {
+              "lookupColumn": "SERVICE",
+              "lookupValue": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('values2_Value', ``, 'string') }}"
+            }
+          ]
+        },
+        "combineFilters": "OR",
+        "options": {
+          "returnFirstMatch": false
+        }
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        4512,
+        1664
+      ],
+      "id": "bf63a468-1e14-4208-8a87-db4ac243b8cc",
+      "name": "get_client_bookings",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "86YbVkziLxpm2Zwo",
+          "name": "Google Sheets account 6"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "=Updates Notes for a booking by matching:\n1. First tries: NAME + SERVICE\n2. If not found: NAME + DATE  \n3. If still not found: NAME + PHONE (fallback)\n",
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1iyl7C7lj7MgWZn8j_n2Yo93JROMEvtU5Nmu6hhLk0e4",
+          "mode": "list",
+          "cachedResultName": "Confirmed_Bookings",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1iyl7C7lj7MgWZn8j_n2Yo93JROMEvtU5Nmu6hhLk0e4/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1iyl7C7lj7MgWZn8j_n2Yo93JROMEvtU5Nmu6hhLk0e4/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "NOTES": "={{ $fromAI('Notes', '', 'string') }}",
+            "CALENDER_EVENT_ID": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('CALENDER_EVENT_ID__using_to_match_', ``, 'string') }}"
+          },
+          "matchingColumns": [
+            "CALENDER_EVENT_ID"
+          ],
+          "schema": [
+            {
+              "id": "CALENDER_EVENT_ID",
+              "displayName": "CALENDER_EVENT_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "NAME",
+              "displayName": "NAME",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "PHONE NUMBER",
+              "displayName": "PHONE NUMBER",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "EMAIL",
+              "displayName": "EMAIL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "SERVICE",
+              "displayName": "SERVICE",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "APPOINTMENT_DATE_AND_TIME",
+              "displayName": "APPOINTMENT_DATE_AND_TIME",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "STATUS",
+              "displayName": "STATUS",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "SPECIALIST",
+              "displayName": "SPECIALIST",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "NOTES",
+              "displayName": "NOTES",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        4688,
+        1680
+      ],
+      "id": "d390a11e-be73-44c2-bc14-9aede217498c",
+      "name": "update_booking_notes",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "86YbVkziLxpm2Zwo",
+          "name": "Google Sheets account 6"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        6352,
+        1456
+      ],
+      "id": "6fae8575-f256-4b0a-ae92-41656e07c72b",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "c_de01882be5fc7db9c7728ba460c596cd15427e6cd904b84edb7b38bad7d7d393@group.calendar.google.com",
+          "mode": "list",
+          "cachedResultName": "MBO Melbourne"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        4864,
+        1680
+      ],
+      "id": "1d868a52-1b83-4cdf-b864-33ee25cfd26d",
+      "name": "get_client_bookings_calender",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "yEXBG2CUZsdAS4Yi",
+          "name": "Autozen Main"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "c_a04caa5602da16e39bc1883e6504c1496b383cdcfc980a02046bb33538c5a876@group.calendar.google.com",
+          "mode": "list",
+          "cachedResultName": "MBO_Zar_Griffin"
+        },
+        "returnAll": true,
+        "timeMin": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('start_date', 'Start date in ISO format for checking availability', 'string') }}",
+        "timeMax": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('end_date', 'End date in ISO format for checking availability', 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        4992,
+        1680
+      ],
+      "id": "ebba8bd6-4c76-4b8a-8b76-8bd26c1e5390",
+      "name": "check_Zar_calendar",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "yEXBG2CUZsdAS4Yi",
+          "name": "Autozen Main"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "c_f3f4597bfa444fdd62ad2fbfa5a7d75071d5dafe7aa6dd97890f086d6b6fc926@group.calendar.google.com",
+          "mode": "list",
+          "cachedResultName": "MBO_Neetu_Sharma"
+        },
+        "returnAll": true,
+        "timeMin": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('start_date', 'Start date in ISO format for checking availability', 'string') }}",
+        "timeMax": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('end_date', 'End date in ISO format for checking availability', 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        5120,
+        1680
+      ],
+      "id": "44db4d0a-6ed8-42af-b0a9-6bf70b904311",
+      "name": "check_Neetu_calendar",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "yEXBG2CUZsdAS4Yi",
+          "name": "Autozen Main"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "c_de01882be5fc7db9c7728ba460c596cd15427e6cd904b84edb7b38bad7d7d393@group.calendar.google.com",
+          "mode": "list",
+          "cachedResultName": "MBO_Alessia_Zammit"
+        },
+        "returnAll": true,
+        "timeMin": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('start_date', 'Start date in ISO format for checking availability', 'string') }}",
+        "timeMax": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('end_date', 'End date in ISO format for checking availability', 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        5248,
+        1680
+      ],
+      "id": "08756303-dc61-47f7-9acb-9dafeffb8056",
+      "name": "check_Alessia_calendar",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "yEXBG2CUZsdAS4Yi",
+          "name": "Autozen Main"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "c_d0165719a63bb73e88c6792ddb5783039ea8620b3463343d0b456cfc6961cfd9@group.calendar.google.com",
+          "mode": "list",
+          "cachedResultName": "MBO_Erin_Davies"
+        },
+        "returnAll": true,
+        "timeMin": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('start_date', 'Start date in ISO format for checking availability', 'string') }}",
+        "timeMax": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('end_date', 'End date in ISO format for checking availability', 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        5376,
+        1680
+      ],
+      "id": "cec8508c-f5b3-4488-a0d4-9fab0b768d72",
+      "name": "check_Erin_calendar",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "yEXBG2CUZsdAS4Yi",
+          "name": "Autozen Main"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "c_e378bae45439fec51865e1807414fe0b48c7ac5ec2aa24c16b640ee38859e14e@group.calendar.google.com",
+          "mode": "list",
+          "cachedResultName": "MBO_Tieta_Uka"
+        },
+        "returnAll": true,
+        "timeMin": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('After', `Start date in ISO format for checking availability`, 'string') }}",
+        "timeMax": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('end_date', 'End date in ISO format for checking availability', 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        5504,
+        1680
+      ],
+      "id": "4526e86c-3ccd-43c0-b64b-b1734a6d90ac",
+      "name": "check_Tieta_calendar",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "yEXBG2CUZsdAS4Yi",
+          "name": "Autozen Main"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "c_1321be4240f1a703707d20811256ef03e83298431680b0094c4d9e647f4501b8@group.calendar.google.com",
+          "mode": "list",
+          "cachedResultName": "MBO_Holly_Shorthouse"
+        },
+        "returnAll": true,
+        "timeMin": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('start_date', 'Start date in ISO format for checking availability', 'string') }}",
+        "timeMax": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('end_date', 'End date in ISO format for checking availability', 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        5632,
+        1680
+      ],
+      "id": "a1ee5802-1ec9-420c-9162-43f6f8728bd8",
+      "name": "check_Holly_calendar",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "yEXBG2CUZsdAS4Yi",
+          "name": "Autozen Main"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "c_b5bb5e4f60ad8f7d386b4a074c0d2cdab5fe8152b0f85875979785df60a7bb91@group.calendar.google.com",
+          "mode": "list",
+          "cachedResultName": "MBO_Elena_Occhietti"
+        },
+        "returnAll": true,
+        "timeMin": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('After', `Start date in ISO format for checking availability`, 'string') }}",
+        "timeMax": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('end_date', 'End date in ISO format for checking availability', 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        5760,
+        1680
+      ],
+      "id": "a24246c5-b0a1-461a-a6e8-7063a7911479",
+      "name": "check_Elena_calendar",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "yEXBG2CUZsdAS4Yi",
+          "name": "Autozen Main"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "c_3ed651d71907cb3457f10116a5297f91eae3cb4998a668de401ce43419703e1c@group.calendar.google.com",
+          "mode": "list",
+          "cachedResultName": "MBO_Laura_Meli"
+        },
+        "returnAll": true,
+        "timeMin": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('start_date', 'Start date in ISO format for checking availability', 'string') }}",
+        "timeMax": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('end_date', 'End date in ISO format for checking availability', 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        5888,
+        1680
+      ],
+      "id": "1ce9a3f8-c546-4435-8d91-2f3eb7e8ef90",
+      "name": "check_Laura_Meli_calendar",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "yEXBG2CUZsdAS4Yi",
+          "name": "Autozen Main"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "c_5bbb4e769087311964ffce940ab284e6ca91bb94d6968c51b22a31ca8c563311@group.calendar.google.com",
+          "mode": "list",
+          "cachedResultName": "MBO_Nikki_Svoboda"
+        },
+        "returnAll": true,
+        "timeMin": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('start_date', 'Start date in ISO format for checking availability', 'string') }}",
+        "timeMax": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('end_date', 'End date in ISO format for checking availability', 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        6016,
+        1680
+      ],
+      "id": "37f8ac3c-0f00-4340-97a1-c18c1885b2fd",
+      "name": "check_Nikki_calendar",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "yEXBG2CUZsdAS4Yi",
+          "name": "Autozen Main"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "c_e47d0bca123cf381560d098fff0268a3afaccdf14299bde12ff23f26bb28c7d4@group.calendar.google.com",
+          "mode": "list",
+          "cachedResultName": "MBO_Suzie_Mcintosh"
+        },
+        "returnAll": true,
+        "timeMin": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('start_date', 'Start date in ISO format for checking availability', 'string') }}",
+        "timeMax": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('end_date', 'End date in ISO format for checking availability', 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        6144,
+        1680
+      ],
+      "id": "f555c37f-ce7f-4279-b012-76eb059c37a3",
+      "name": "check_Suzie_calendar",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "yEXBG2CUZsdAS4Yi",
+          "name": "Autozen Main"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "log_booking_request": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_client_bookings": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "update_booking_notes": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_client_bookings_calender": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check_Zar_calendar": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check_Neetu_calendar": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check_Alessia_calendar": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check_Erin_calendar": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check_Tieta_calendar": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check_Holly_calendar": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check_Elena_calendar": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check_Laura_Meli_calendar": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check_Nikki_calendar": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check_Suzie_calendar": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {
+    "Webhook": [
+      {
+        "headers": {
+          "host": "janitb.app.n8n.cloud",
+          "user-agent": "axios/1.13.2",
+          "content-length": "29461",
+          "accept": "application/json, text/plain, */*",
+          "accept-encoding": "gzip, br",
+          "cdn-loop": "cloudflare; loops=1; subreqs=1",
+          "cf-connecting-ip": "100.20.5.228",
+          "cf-ew-via": "15",
+          "cf-ipcountry": "US",
+          "cf-ray": "9cbdd58c7f158636-PDX",
+          "cf-visitor": "{\"scheme\":\"https\"}",
+          "cf-worker": "n8n.cloud",
+          "content-type": "application/json",
+          "x-forwarded-for": "100.20.5.228, 104.23.160.225",
+          "x-forwarded-host": "janitb.app.n8n.cloud",
+          "x-forwarded-port": "443",
+          "x-forwarded-proto": "https",
+          "x-forwarded-server": "traefik-prod-users-gwc-73-749b7bdd47-rdnj7",
+          "x-is-trusted": "yes",
+          "x-real-ip": "100.20.5.228",
+          "x-retell-signature": "v=1770749866925,d=9b617c06f660d5c4a0e57a767352e0f4c73b8d1ba1f19a381e3139b0f36bcbe3"
+        },
+        "params": {},
+        "query": {},
+        "body": {
+          "call": {
+            "call_id": "call_ce7b915a50b46f8dea12608ae26",
+            "call_type": "web_call",
+            "agent_id": "agent_27b3afbba11beba4a722cea28f",
+            "agent_version": 1,
+            "agent_name": "suzie -short",
+            "call_status": "ongoing",
+            "start_timestamp": 1770749753752,
+            "transcript": "Agent: Good morning, thank you for calling Suzie McIntosh Brows. This is Victoria. How can I help you today?\nUser: Hi. My name is Milka Todd. Cannot find my booking. Can you please help me to locate it?\nAgent: Thank you, Milka. Let me confirm the spelling—M-I-L-K-A Milka, T-O-D-D Todd? Is that correct?\nUser: No. It's m I l k a. T o t.\nAgent: Thank you for clarifying. So that's M-I-L-K-A Milka, T-O-T Tot? Is that right?\nUser: Yes?\nAgent: Perfect, thank you Milka. Do you remember which date your appointment is, or even the week or month?\nUser: It was around first week of April.\nAgent: Thank you for sharing that. What service was your appointment for—Brow Sculpt, Cosmetic Tattoo, Lash Lift, or something else?\nUser: I really don't know about that.\nAgent: No worries at all, Milka. May I please have your phone number so I can search for your booking?\nUser: Zero four nine five two three five four Two two.\nAgent: Let me confirm: zero... four... nine... five... two... three... five... four... two... two. Correct?\nUser: Yes.\nAgent: Milka, I found your booking for Cosmetic Tattoo Brows with Suzie on Thursday, 2nd April 2026 at 2:00pm. Is there anything else I can assist you with regarding this appointment?\nUser: I could be running late for this.\nUser: By seventeen minutes.\n",
+            "transcript_object": [
+              {
+                "role": "agent",
+                "content": "Good morning, thank you for calling Suzie McIntosh Brows. This is Victoria. How can I help you today?",
+                "words": [
+                  {
+                    "word": "Good ",
+                    "start": 2.353,
+                    "end": 2.55
+                  },
+                  {
+                    "word": "morning, ",
+                    "start": 2.55,
+                    "end": 2.98
+                  },
+                  {
+                    "word": "thank ",
+                    "start": 2.98,
+                    "end": 3.224
+                  },
+                  {
+                    "word": "you ",
+                    "start": 3.224,
+                    "end": 3.352
+                  },
+                  {
+                    "word": "for ",
+                    "start": 3.352,
+                    "end": 3.479
+                  },
+                  {
+                    "word": "calling ",
+                    "start": 3.479,
+                    "end": 3.804
+                  },
+                  {
+                    "word": "Suzie ",
+                    "start": 3.804,
+                    "end": 4.083
+                  },
+                  {
+                    "word": "McIntosh ",
+                    "start": 4.083,
+                    "end": 4.559
+                  },
+                  {
+                    "word": "Brows.",
+                    "start": 4.559,
+                    "end": 5.256
+                  },
+                  {
+                    "word": " This ",
+                    "start": 5.301583251953125,
+                    "end": 5.476583251953125
+                  },
+                  {
+                    "word": "is ",
+                    "start": 5.476583251953125,
+                    "end": 5.592583251953125
+                  },
+                  {
+                    "word": "Victoria.",
+                    "start": 5.592583251953125,
+                    "end": 6.370583251953125
+                  },
+                  {
+                    "word": " How ",
+                    "start": 6.416125,
+                    "end": 6.567125
+                  },
+                  {
+                    "word": "can ",
+                    "start": 6.567125,
+                    "end": 6.707125
+                  },
+                  {
+                    "word": "I ",
+                    "start": 6.707125,
+                    "end": 6.788125
+                  },
+                  {
+                    "word": "help ",
+                    "start": 6.788125,
+                    "end": 6.997125
+                  },
+                  {
+                    "word": "you ",
+                    "start": 6.997125,
+                    "end": 7.125125
+                  },
+                  {
+                    "word": "today?",
+                    "start": 7.125125,
+                    "end": 7.670125
+                  }
+                ],
+                "metadata": {
+                  "response_id": 0
+                }
+              },
+              {
+                "role": "user",
+                "content": "Hi. My name is Milka Todd. Cannot find my booking. Can you please help me to locate it?",
+                "words": [
+                  {
+                    "word": "Hi. ",
+                    "start": 8.525,
+                    "end": 8.9249996
+                  },
+                  {
+                    "word": "My ",
+                    "start": 8.9249996,
+                    "end": 9.084999999999999
+                  },
+                  {
+                    "word": "name ",
+                    "start": 9.084999999999999,
+                    "end": 9.245
+                  },
+                  {
+                    "word": "is ",
+                    "start": 9.245,
+                    "end": 9.405
+                  },
+                  {
+                    "word": "Milka ",
+                    "start": 9.405,
+                    "end": 9.9649996
+                  },
+                  {
+                    "word": "Todd. ",
+                    "start": 9.9649996,
+                    "end": 10.2849998
+                  },
+                  {
+                    "word": "Cannot ",
+                    "start": 11.455,
+                    "end": 11.935
+                  },
+                  {
+                    "word": "find ",
+                    "start": 12.494999,
+                    "end": 13.215
+                  },
+                  {
+                    "word": "my ",
+                    "start": 13.215,
+                    "end": 13.534999000000001
+                  },
+                  {
+                    "word": "booking. ",
+                    "start": 13.534999000000001,
+                    "end": 14.015
+                  },
+                  {
+                    "word": "Can ",
+                    "start": 14.015,
+                    "end": 14.255
+                  },
+                  {
+                    "word": "you ",
+                    "start": 14.255,
+                    "end": 14.494999
+                  },
+                  {
+                    "word": "please ",
+                    "start": 14.494999,
+                    "end": 14.734999
+                  },
+                  {
+                    "word": "help ",
+                    "start": 14.734999,
+                    "end": 14.895
+                  },
+                  {
+                    "word": "me ",
+                    "start": 14.895,
+                    "end": 15.055
+                  },
+                  {
+                    "word": "to ",
+                    "start": 15.055,
+                    "end": 15.215
+                  },
+                  {
+                    "word": "locate ",
+                    "start": 15.215,
+                    "end": 15.454999
+                  },
+                  {
+                    "word": "it?",
+                    "start": 15.454999,
+                    "end": 15.695
+                  }
+                ]
+              },
+              {
+                "role": "agent",
+                "content": "Thank you, Milka. Let me confirm the spelling—M-I-L-K-A Milka, T-O-D-D Todd? Is that correct?",
+                "words": [
+                  {
+                    "word": "Thank ",
+                    "start": 17.21,
+                    "end": 17.501
+                  },
+                  {
+                    "word": "you, ",
+                    "start": 17.501,
+                    "end": 17.651
+                  },
+                  {
+                    "word": "Milka.",
+                    "start": 17.651,
+                    "end": 18.29
+                  },
+                  {
+                    "word": " Let ",
+                    "start": 18.336,
+                    "end": 18.476
+                  },
+                  {
+                    "word": "me ",
+                    "start": 18.476,
+                    "end": 18.58
+                  },
+                  {
+                    "word": "confirm ",
+                    "start": 18.58,
+                    "end": 19.033
+                  },
+                  {
+                    "word": "the ",
+                    "start": 19.033,
+                    "end": 19.138
+                  },
+                  {
+                    "word": "spelling—M-I-L-K-A ",
+                    "start": 19.138,
+                    "end": 20.31
+                  },
+                  {
+                    "word": "Milka, ",
+                    "start": 20.31,
+                    "end": 20.728
+                  },
+                  {
+                    "word": "T-O-D-D ",
+                    "start": 20.728,
+                    "end": 21.483
+                  },
+                  {
+                    "word": "Todd?",
+                    "start": 21.483,
+                    "end": 22.098
+                  },
+                  {
+                    "word": " Is ",
+                    "start": 22.144083251953123,
+                    "end": 22.272083251953124
+                  },
+                  {
+                    "word": "that ",
+                    "start": 22.272083251953124,
+                    "end": 22.423083251953123
+                  },
+                  {
+                    "word": "correct?",
+                    "start": 22.423083251953123,
+                    "end": 22.934083251953126
+                  }
+                ],
+                "metadata": {
+                  "response_id": 1
+                }
+              },
+              {
+                "role": "user",
+                "content": "No. It's m I l k a. T o t.",
+                "words": [
+                  {
+                    "word": "No. ",
+                    "start": 24.025,
+                    "end": 24.505
+                  },
+                  {
+                    "word": "It's ",
+                    "start": 24.505,
+                    "end": 25.064999
+                  },
+                  {
+                    "word": "m ",
+                    "start": 25.064999,
+                    "end": 25.544999999999998
+                  },
+                  {
+                    "word": "I ",
+                    "start": 25.544999999999998,
+                    "end": 25.785
+                  },
+                  {
+                    "word": "l ",
+                    "start": 25.785,
+                    "end": 26.104999999999997
+                  },
+                  {
+                    "word": "k ",
+                    "start": 26.334999999999997,
+                    "end": 26.735
+                  },
+                  {
+                    "word": "a. ",
+                    "start": 26.735,
+                    "end": 27.054999
+                  },
+                  {
+                    "word": "T ",
+                    "start": 27.604999999999997,
+                    "end": 28.005
+                  },
+                  {
+                    "word": "o ",
+                    "start": 28.005,
+                    "end": 28.244999999999997
+                  },
+                  {
+                    "word": "t.",
+                    "start": 28.244999999999997,
+                    "end": 28.485
+                  }
+                ]
+              },
+              {
+                "role": "agent",
+                "content": "Thank you for clarifying. So that's M-I-L-K-A Milka, T-O-T Tot? Is that right?",
+                "words": [
+                  {
+                    "word": "Thank ",
+                    "start": 31.107,
+                    "end": 31.328
+                  },
+                  {
+                    "word": "you ",
+                    "start": 31.328,
+                    "end": 31.444
+                  },
+                  {
+                    "word": "for ",
+                    "start": 31.444,
+                    "end": 31.595
+                  },
+                  {
+                    "word": "clarifying.",
+                    "start": 31.595,
+                    "end": 32.384
+                  },
+                  {
+                    "word": " So ",
+                    "start": 32.430208251953125,
+                    "end": 32.58120825195312
+                  },
+                  {
+                    "word": "that's ",
+                    "start": 32.58120825195312,
+                    "end": 32.88320825195313
+                  },
+                  {
+                    "word": "M-I-L-K-A ",
+                    "start": 32.88320825195313,
+                    "end": 33.60320825195313
+                  },
+                  {
+                    "word": "Milka, ",
+                    "start": 33.60320825195313,
+                    "end": 33.98620825195312
+                  },
+                  {
+                    "word": "T-O-T ",
+                    "start": 33.98620825195312,
+                    "end": 34.497208251953126
+                  },
+                  {
+                    "word": "Tot?",
+                    "start": 34.497208251953126,
+                    "end": 35.031208251953124
+                  },
+                  {
+                    "word": " Is ",
+                    "start": 35.077291748046875,
+                    "end": 35.19429174804687
+                  },
+                  {
+                    "word": "that ",
+                    "start": 35.19429174804687,
+                    "end": 35.35629174804688
+                  },
+                  {
+                    "word": "right?",
+                    "start": 35.35629174804688,
+                    "end": 35.77429174804688
+                  }
+                ],
+                "metadata": {
+                  "response_id": 4
+                }
+              },
+              {
+                "role": "user",
+                "content": "Yes?",
+                "words": [
+                  {
+                    "word": "Yes?",
+                    "start": 36.625,
+                    "end": 36.865
+                  }
+                ]
+              },
+              {
+                "role": "agent",
+                "content": "Perfect, thank you Milka. Do you remember which date your appointment is, or even the week or month?",
+                "words": [
+                  {
+                    "word": "Perfect, ",
+                    "start": 38.627,
+                    "end": 39.045
+                  },
+                  {
+                    "word": "thank ",
+                    "start": 39.045,
+                    "end": 39.266
+                  },
+                  {
+                    "word": "you ",
+                    "start": 39.266,
+                    "end": 39.393
+                  },
+                  {
+                    "word": "Milka.",
+                    "start": 39.393,
+                    "end": 40.044
+                  },
+                  {
+                    "word": " Do ",
+                    "start": 40.0785,
+                    "end": 40.2175
+                  },
+                  {
+                    "word": "you ",
+                    "start": 40.2175,
+                    "end": 40.3335
+                  },
+                  {
+                    "word": "remember ",
+                    "start": 40.3335,
+                    "end": 40.6825
+                  },
+                  {
+                    "word": "which ",
+                    "start": 40.6825,
+                    "end": 40.9025
+                  },
+                  {
+                    "word": "date ",
+                    "start": 40.9025,
+                    "end": 41.0885
+                  },
+                  {
+                    "word": "your ",
+                    "start": 41.0885,
+                    "end": 41.2275
+                  },
+                  {
+                    "word": "appointment ",
+                    "start": 41.2275,
+                    "end": 41.6925
+                  },
+                  {
+                    "word": "is, ",
+                    "start": 41.6925,
+                    "end": 41.8895
+                  },
+                  {
+                    "word": "or ",
+                    "start": 41.8895,
+                    "end": 42.0285
+                  },
+                  {
+                    "word": "even ",
+                    "start": 42.0285,
+                    "end": 42.2375
+                  },
+                  {
+                    "word": "the ",
+                    "start": 42.2375,
+                    "end": 42.3425
+                  },
+                  {
+                    "word": "week ",
+                    "start": 42.3425,
+                    "end": 42.5745
+                  },
+                  {
+                    "word": "or ",
+                    "start": 42.5745,
+                    "end": 42.7135
+                  },
+                  {
+                    "word": "month?",
+                    "start": 42.7135,
+                    "end": 43.3405
+                  }
+                ],
+                "metadata": {
+                  "response_id": 6
+                }
+              },
+              {
+                "role": "user",
+                "content": "It was around first week of April.",
+                "words": [
+                  {
+                    "word": "It ",
+                    "start": 44.345,
+                    "end": 44.665
+                  },
+                  {
+                    "word": "was ",
+                    "start": 44.665,
+                    "end": 44.825002999999995
+                  },
+                  {
+                    "word": "around ",
+                    "start": 44.825002999999995,
+                    "end": 45.225
+                  },
+                  {
+                    "word": "first ",
+                    "start": 45.225,
+                    "end": 45.705
+                  },
+                  {
+                    "word": "week ",
+                    "start": 45.705,
+                    "end": 46.025
+                  },
+                  {
+                    "word": "of ",
+                    "start": 46.025,
+                    "end": 46.265
+                  },
+                  {
+                    "word": "April.",
+                    "start": 46.625,
+                    "end": 47.025
+                  }
+                ]
+              },
+              {
+                "role": "agent",
+                "content": "Thank you for sharing that. What service was your appointment for—Brow Sculpt, Cosmetic Tattoo, Lash Lift, or something else?",
+                "words": [
+                  {
+                    "word": "Thank ",
+                    "start": 48.475,
+                    "end": 48.766
+                  },
+                  {
+                    "word": "you ",
+                    "start": 48.766,
+                    "end": 48.905
+                  },
+                  {
+                    "word": "for ",
+                    "start": 48.905,
+                    "end": 49.067
+                  },
+                  {
+                    "word": "sharing ",
+                    "start": 49.067,
+                    "end": 49.439
+                  },
+                  {
+                    "word": "that.",
+                    "start": 49.439,
+                    "end": 49.973
+                  },
+                  {
+                    "word": " What ",
+                    "start": 50.01895825195312,
+                    "end": 50.21695825195312
+                  },
+                  {
+                    "word": "service ",
+                    "start": 50.21695825195312,
+                    "end": 50.529958251953126
+                  },
+                  {
+                    "word": "was ",
+                    "start": 50.529958251953126,
+                    "end": 50.69295825195312
+                  },
+                  {
+                    "word": "your ",
+                    "start": 50.69295825195312,
+                    "end": 50.831958251953125
+                  },
+                  {
+                    "word": "appointment ",
+                    "start": 50.831958251953125,
+                    "end": 51.28495825195313
+                  },
+                  {
+                    "word": "for—Brow ",
+                    "start": 51.28495825195313,
+                    "end": 51.922958251953126
+                  },
+                  {
+                    "word": "Sculpt, ",
+                    "start": 51.922958251953126,
+                    "end": 52.282958251953126
+                  },
+                  {
+                    "word": "Cosmetic ",
+                    "start": 52.282958251953126,
+                    "end": 52.74795825195312
+                  },
+                  {
+                    "word": "Tattoo, ",
+                    "start": 52.74795825195312,
+                    "end": 53.362958251953124
+                  },
+                  {
+                    "word": "Lash ",
+                    "start": 53.362958251953124,
+                    "end": 53.71095825195312
+                  },
+                  {
+                    "word": "Lift, ",
+                    "start": 53.71095825195312,
+                    "end": 53.977958251953126
+                  },
+                  {
+                    "word": "or ",
+                    "start": 53.977958251953126,
+                    "end": 54.09495825195312
+                  },
+                  {
+                    "word": "something ",
+                    "start": 54.09495825195312,
+                    "end": 54.48895825195312
+                  },
+                  {
+                    "word": "else?",
+                    "start": 54.48895825195312,
+                    "end": 55.03495825195313
+                  }
+                ],
+                "metadata": {
+                  "response_id": 7
+                }
+              },
+              {
+                "role": "user",
+                "content": "I really don't know about that.",
+                "words": [
+                  {
+                    "word": "I ",
+                    "start": 56.725,
+                    "end": 57.045
+                  },
+                  {
+                    "word": "really ",
+                    "start": 57.045,
+                    "end": 57.365
+                  },
+                  {
+                    "word": "don't ",
+                    "start": 57.365,
+                    "end": 57.604998
+                  },
+                  {
+                    "word": "know ",
+                    "start": 57.604998,
+                    "end": 57.764998
+                  },
+                  {
+                    "word": "about ",
+                    "start": 57.764998,
+                    "end": 57.925
+                  },
+                  {
+                    "word": "that.",
+                    "start": 57.925,
+                    "end": 58.085
+                  }
+                ]
+              },
+              {
+                "role": "agent",
+                "content": "No worries at all, Milka. May I please have your phone number so I can search for your booking?",
+                "words": [
+                  {
+                    "word": "No ",
+                    "start": 59.616,
+                    "end": 59.813
+                  },
+                  {
+                    "word": "worries ",
+                    "start": 59.813,
+                    "end": 60.115
+                  },
+                  {
+                    "word": "at ",
+                    "start": 60.115,
+                    "end": 60.196
+                  },
+                  {
+                    "word": "all, ",
+                    "start": 60.196,
+                    "end": 60.371
+                  },
+                  {
+                    "word": "Milka.",
+                    "start": 60.371,
+                    "end": 60.94
+                  },
+                  {
+                    "word": " May ",
+                    "start": 60.9855,
+                    "end": 61.2065
+                  },
+                  {
+                    "word": "I ",
+                    "start": 61.2065,
+                    "end": 61.2995
+                  },
+                  {
+                    "word": "please ",
+                    "start": 61.2995,
+                    "end": 61.5665
+                  },
+                  {
+                    "word": "have ",
+                    "start": 61.5665,
+                    "end": 61.7285
+                  },
+                  {
+                    "word": "your ",
+                    "start": 61.7285,
+                    "end": 61.8685
+                  },
+                  {
+                    "word": "phone ",
+                    "start": 61.8685,
+                    "end": 62.1125
+                  },
+                  {
+                    "word": "number ",
+                    "start": 62.1125,
+                    "end": 62.4025
+                  },
+                  {
+                    "word": "so ",
+                    "start": 62.4025,
+                    "end": 62.5415
+                  },
+                  {
+                    "word": "I ",
+                    "start": 62.5415,
+                    "end": 62.6115
+                  },
+                  {
+                    "word": "can ",
+                    "start": 62.6115,
+                    "end": 62.7735
+                  },
+                  {
+                    "word": "search ",
+                    "start": 62.7735,
+                    "end": 63.0405
+                  },
+                  {
+                    "word": "for ",
+                    "start": 63.0405,
+                    "end": 63.1805
+                  },
+                  {
+                    "word": "your ",
+                    "start": 63.1805,
+                    "end": 63.3195
+                  },
+                  {
+                    "word": "booking?",
+                    "start": 63.3195,
+                    "end": 63.8655
+                  }
+                ],
+                "metadata": {
+                  "response_id": 8
+                }
+              },
+              {
+                "role": "user",
+                "content": "Zero four nine five two three five four Two two.",
+                "words": [
+                  {
+                    "word": "Zero ",
+                    "start": 65.485,
+                    "end": 65.805
+                  },
+                  {
+                    "word": "four ",
+                    "start": 65.805,
+                    "end": 66.044997
+                  },
+                  {
+                    "word": "nine ",
+                    "start": 66.044997,
+                    "end": 66.285
+                  },
+                  {
+                    "word": "five ",
+                    "start": 66.285,
+                    "end": 66.44500000000001
+                  },
+                  {
+                    "word": "two ",
+                    "start": 66.44500000000001,
+                    "end": 66.685
+                  },
+                  {
+                    "word": "three ",
+                    "start": 66.685,
+                    "end": 66.924998
+                  },
+                  {
+                    "word": "five ",
+                    "start": 66.924998,
+                    "end": 67.165
+                  },
+                  {
+                    "word": "four ",
+                    "start": 67.165,
+                    "end": 67.324995
+                  },
+                  {
+                    "word": "Two ",
+                    "start": 68.615004,
+                    "end": 68.935
+                  },
+                  {
+                    "word": "two.",
+                    "start": 68.935,
+                    "end": 69.17500000000001
+                  }
+                ]
+              },
+              {
+                "role": "agent",
+                "content": "Let me confirm: zero... four... nine... five... two... three... five... four... two... two. Correct?",
+                "words": [
+                  {
+                    "word": "Let ",
+                    "start": 72.516,
+                    "end": 72.667
+                  },
+                  {
+                    "word": "me ",
+                    "start": 72.667,
+                    "end": 72.771
+                  },
+                  {
+                    "word": "confirm: ",
+                    "start": 72.771,
+                    "end": 73.282
+                  },
+                  {
+                    "word": "zero...",
+                    "start": 73.282,
+                    "end": 73.956
+                  },
+                  {
+                    "word": " four...",
+                    "start": 74.0015,
+                    "end": 74.5595
+                  },
+                  {
+                    "word": " nine...",
+                    "start": 74.60520825195313,
+                    "end": 75.11620825195313
+                  },
+                  {
+                    "word": " five...",
+                    "start": 75.1285,
+                    "end": 75.6735
+                  },
+                  {
+                    "word": " two...",
+                    "start": 75.71979174804687,
+                    "end": 76.13779174804688
+                  },
+                  {
+                    "word": " three...",
+                    "start": 76.18420825195312,
+                    "end": 76.69520825195312
+                  },
+                  {
+                    "word": " five...",
+                    "start": 76.7415,
+                    "end": 77.3455
+                  },
+                  {
+                    "word": " four...",
+                    "start": 77.36866674804688,
+                    "end": 77.90266674804687
+                  },
+                  {
+                    "word": " two...",
+                    "start": 77.92595825195312,
+                    "end": 78.55295825195313
+                  },
+                  {
+                    "word": " two.",
+                    "start": 78.599125,
+                    "end": 79.110125
+                  },
+                  {
+                    "word": " Correct?",
+                    "start": 79.14541674804687,
+                    "end": 79.76041674804688
+                  }
+                ],
+                "metadata": {
+                  "response_id": 10
+                }
+              },
+              {
+                "role": "user",
+                "content": "Yes.",
+                "words": [
+                  {
+                    "word": "Yes.",
+                    "start": 80.595,
+                    "end": 80.915
+                  }
+                ]
+              },
+              {
+                "role": "agent",
+                "content": "Milka, I found your booking for Cosmetic Tattoo Brows with Suzie on Thursday, 2nd April 2026 at 2:00pm. Is there anything else I can assist you with regarding this appointment?",
+                "words": [
+                  {
+                    "word": "Milka, ",
+                    "start": 95.623,
+                    "end": 95.936
+                  },
+                  {
+                    "word": "I ",
+                    "start": 95.936,
+                    "end": 96.053
+                  },
+                  {
+                    "word": "found ",
+                    "start": 96.053,
+                    "end": 96.25
+                  },
+                  {
+                    "word": "your ",
+                    "start": 96.25,
+                    "end": 96.412
+                  },
+                  {
+                    "word": "booking ",
+                    "start": 96.412,
+                    "end": 96.726
+                  },
+                  {
+                    "word": "for ",
+                    "start": 96.726,
+                    "end": 96.9
+                  },
+                  {
+                    "word": "Cosmetic ",
+                    "start": 96.9,
+                    "end": 97.353
+                  },
+                  {
+                    "word": "Tattoo ",
+                    "start": 97.353,
+                    "end": 97.643
+                  },
+                  {
+                    "word": "Brows ",
+                    "start": 97.643,
+                    "end": 97.864
+                  },
+                  {
+                    "word": "with ",
+                    "start": 97.864,
+                    "end": 98.015
+                  },
+                  {
+                    "word": "Suzie ",
+                    "start": 98.015,
+                    "end": 98.398
+                  },
+                  {
+                    "word": "on ",
+                    "start": 98.398,
+                    "end": 98.56
+                  },
+                  {
+                    "word": "Thursday, ",
+                    "start": 98.56,
+                    "end": 99.001
+                  },
+                  {
+                    "word": "2nd ",
+                    "start": 99.001,
+                    "end": 99.118
+                  },
+                  {
+                    "word": "April ",
+                    "start": 99.118,
+                    "end": 99.454
+                  },
+                  {
+                    "word": "2026 ",
+                    "start": 99.454,
+                    "end": 99.57
+                  },
+                  {
+                    "word": "at ",
+                    "start": 99.57,
+                    "end": 99.954
+                  },
+                  {
+                    "word": "2:00pm.",
+                    "start": 99.954,
+                    "end": 100.255
+                  },
+                  {
+                    "word": " Is ",
+                    "start": 101.82225,
+                    "end": 101.98525
+                  },
+                  {
+                    "word": "there ",
+                    "start": 101.98525,
+                    "end": 102.14825
+                  },
+                  {
+                    "word": "anything ",
+                    "start": 102.14825,
+                    "end": 102.42625
+                  },
+                  {
+                    "word": "else ",
+                    "start": 102.42625,
+                    "end": 102.62425
+                  },
+                  {
+                    "word": "I ",
+                    "start": 102.62425,
+                    "end": 102.68225
+                  },
+                  {
+                    "word": "can ",
+                    "start": 102.68225,
+                    "end": 102.85625
+                  },
+                  {
+                    "word": "assist ",
+                    "start": 102.85625,
+                    "end": 103.18125
+                  },
+                  {
+                    "word": "you ",
+                    "start": 103.18125,
+                    "end": 103.33225
+                  },
+                  {
+                    "word": "with ",
+                    "start": 103.33225,
+                    "end": 103.55225
+                  },
+                  {
+                    "word": "regarding ",
+                    "start": 103.55225,
+                    "end": 103.95925
+                  },
+                  {
+                    "word": "this ",
+                    "start": 103.95925,
+                    "end": 104.12125
+                  },
+                  {
+                    "word": "appointment?",
+                    "start": 104.12125,
+                    "end": 104.79525
+                  }
+                ],
+                "metadata": {
+                  "response_id": 11
+                }
+              },
+              {
+                "role": "user",
+                "content": "I could be running late for this.",
+                "words": [
+                  {
+                    "word": "I ",
+                    "start": 105.95500000000001,
+                    "end": 106.195006
+                  },
+                  {
+                    "word": "could ",
+                    "start": 106.195006,
+                    "end": 106.515005
+                  },
+                  {
+                    "word": "be ",
+                    "start": 106.515005,
+                    "end": 106.75500000000001
+                  },
+                  {
+                    "word": "running ",
+                    "start": 106.75500000000001,
+                    "end": 107.155005
+                  },
+                  {
+                    "word": "late ",
+                    "start": 107.155005,
+                    "end": 107.47500500000001
+                  },
+                  {
+                    "word": "for ",
+                    "start": 107.47500500000001,
+                    "end": 107.715
+                  },
+                  {
+                    "word": "this.",
+                    "start": 107.715,
+                    "end": 107.95500000000001
+                  }
+                ]
+              },
+              {
+                "role": "user",
+                "content": "By seventeen minutes.",
+                "words": [
+                  {
+                    "word": "By ",
+                    "start": 109.715,
+                    "end": 110.19500000000001
+                  },
+                  {
+                    "word": "seventeen ",
+                    "start": 110.19500000000001,
+                    "end": 110.595
+                  },
+                  {
+                    "word": "minutes.",
+                    "start": 110.595,
+                    "end": 110.915
+                  }
+                ]
+              }
+            ],
+            "transcript_with_tool_calls": [
+              {
+                "role": "agent",
+                "content": "Good morning, thank you for calling Suzie McIntosh Brows. This is Victoria. How can I help you today?",
+                "words": [
+                  {
+                    "word": "Good ",
+                    "start": 2.353,
+                    "end": 2.55
+                  },
+                  {
+                    "word": "morning, ",
+                    "start": 2.55,
+                    "end": 2.98
+                  },
+                  {
+                    "word": "thank ",
+                    "start": 2.98,
+                    "end": 3.224
+                  },
+                  {
+                    "word": "you ",
+                    "start": 3.224,
+                    "end": 3.352
+                  },
+                  {
+                    "word": "for ",
+                    "start": 3.352,
+                    "end": 3.479
+                  },
+                  {
+                    "word": "calling ",
+                    "start": 3.479,
+                    "end": 3.804
+                  },
+                  {
+                    "word": "Suzie ",
+                    "start": 3.804,
+                    "end": 4.083
+                  },
+                  {
+                    "word": "McIntosh ",
+                    "start": 4.083,
+                    "end": 4.559
+                  },
+                  {
+                    "word": "Brows.",
+                    "start": 4.559,
+                    "end": 5.256
+                  },
+                  {
+                    "word": " This ",
+                    "start": 5.301583251953125,
+                    "end": 5.476583251953125
+                  },
+                  {
+                    "word": "is ",
+                    "start": 5.476583251953125,
+                    "end": 5.592583251953125
+                  },
+                  {
+                    "word": "Victoria.",
+                    "start": 5.592583251953125,
+                    "end": 6.370583251953125
+                  },
+                  {
+                    "word": " How ",
+                    "start": 6.416125,
+                    "end": 6.567125
+                  },
+                  {
+                    "word": "can ",
+                    "start": 6.567125,
+                    "end": 6.707125
+                  },
+                  {
+                    "word": "I ",
+                    "start": 6.707125,
+                    "end": 6.788125
+                  },
+                  {
+                    "word": "help ",
+                    "start": 6.788125,
+                    "end": 6.997125
+                  },
+                  {
+                    "word": "you ",
+                    "start": 6.997125,
+                    "end": 7.125125
+                  },
+                  {
+                    "word": "today?",
+                    "start": 7.125125,
+                    "end": 7.670125
+                  }
+                ],
+                "metadata": {
+                  "response_id": 0
+                }
+              },
+              {
+                "role": "user",
+                "content": "Hi. My name is Milka Todd. Cannot find my booking. Can you please help me to locate it?",
+                "words": [
+                  {
+                    "word": "Hi. ",
+                    "start": 8.525,
+                    "end": 8.9249996
+                  },
+                  {
+                    "word": "My ",
+                    "start": 8.9249996,
+                    "end": 9.084999999999999
+                  },
+                  {
+                    "word": "name ",
+                    "start": 9.084999999999999,
+                    "end": 9.245
+                  },
+                  {
+                    "word": "is ",
+                    "start": 9.245,
+                    "end": 9.405
+                  },
+                  {
+                    "word": "Milka ",
+                    "start": 9.405,
+                    "end": 9.9649996
+                  },
+                  {
+                    "word": "Todd. ",
+                    "start": 9.9649996,
+                    "end": 10.2849998
+                  },
+                  {
+                    "word": "Cannot ",
+                    "start": 11.455,
+                    "end": 11.935
+                  },
+                  {
+                    "word": "find ",
+                    "start": 12.494999,
+                    "end": 13.215
+                  },
+                  {
+                    "word": "my ",
+                    "start": 13.215,
+                    "end": 13.534999000000001
+                  },
+                  {
+                    "word": "booking. ",
+                    "start": 13.534999000000001,
+                    "end": 14.015
+                  },
+                  {
+                    "word": "Can ",
+                    "start": 14.015,
+                    "end": 14.255
+                  },
+                  {
+                    "word": "you ",
+                    "start": 14.255,
+                    "end": 14.494999
+                  },
+                  {
+                    "word": "please ",
+                    "start": 14.494999,
+                    "end": 14.734999
+                  },
+                  {
+                    "word": "help ",
+                    "start": 14.734999,
+                    "end": 14.895
+                  },
+                  {
+                    "word": "me ",
+                    "start": 14.895,
+                    "end": 15.055
+                  },
+                  {
+                    "word": "to ",
+                    "start": 15.055,
+                    "end": 15.215
+                  },
+                  {
+                    "word": "locate ",
+                    "start": 15.215,
+                    "end": 15.454999
+                  },
+                  {
+                    "word": "it?",
+                    "start": 15.454999,
+                    "end": 15.695
+                  }
+                ]
+              },
+              {
+                "role": "agent",
+                "content": "Thank you, Milka. Let me confirm the spelling—M-I-L-K-A Milka, T-O-D-D Todd? Is that correct?",
+                "words": [
+                  {
+                    "word": "Thank ",
+                    "start": 17.21,
+                    "end": 17.501
+                  },
+                  {
+                    "word": "you, ",
+                    "start": 17.501,
+                    "end": 17.651
+                  },
+                  {
+                    "word": "Milka.",
+                    "start": 17.651,
+                    "end": 18.29
+                  },
+                  {
+                    "word": " Let ",
+                    "start": 18.336,
+                    "end": 18.476
+                  },
+                  {
+                    "word": "me ",
+                    "start": 18.476,
+                    "end": 18.58
+                  },
+                  {
+                    "word": "confirm ",
+                    "start": 18.58,
+                    "end": 19.033
+                  },
+                  {
+                    "word": "the ",
+                    "start": 19.033,
+                    "end": 19.138
+                  },
+                  {
+                    "word": "spelling—M-I-L-K-A ",
+                    "start": 19.138,
+                    "end": 20.31
+                  },
+                  {
+                    "word": "Milka, ",
+                    "start": 20.31,
+                    "end": 20.728
+                  },
+                  {
+                    "word": "T-O-D-D ",
+                    "start": 20.728,
+                    "end": 21.483
+                  },
+                  {
+                    "word": "Todd?",
+                    "start": 21.483,
+                    "end": 22.098
+                  },
+                  {
+                    "word": " Is ",
+                    "start": 22.144083251953123,
+                    "end": 22.272083251953124
+                  },
+                  {
+                    "word": "that ",
+                    "start": 22.272083251953124,
+                    "end": 22.423083251953123
+                  },
+                  {
+                    "word": "correct?",
+                    "start": 22.423083251953123,
+                    "end": 22.934083251953126
+                  }
+                ],
+                "metadata": {
+                  "response_id": 1
+                }
+              },
+              {
+                "role": "user",
+                "content": "No. It's m I l k a. T o t.",
+                "words": [
+                  {
+                    "word": "No. ",
+                    "start": 24.025,
+                    "end": 24.505
+                  },
+                  {
+                    "word": "It's ",
+                    "start": 24.505,
+                    "end": 25.064999
+                  },
+                  {
+                    "word": "m ",
+                    "start": 25.064999,
+                    "end": 25.544999999999998
+                  },
+                  {
+                    "word": "I ",
+                    "start": 25.544999999999998,
+                    "end": 25.785
+                  },
+                  {
+                    "word": "l ",
+                    "start": 25.785,
+                    "end": 26.104999999999997
+                  },
+                  {
+                    "word": "k ",
+                    "start": 26.334999999999997,
+                    "end": 26.735
+                  },
+                  {
+                    "word": "a. ",
+                    "start": 26.735,
+                    "end": 27.054999
+                  },
+                  {
+                    "word": "T ",
+                    "start": 27.604999999999997,
+                    "end": 28.005
+                  },
+                  {
+                    "word": "o ",
+                    "start": 28.005,
+                    "end": 28.244999999999997
+                  },
+                  {
+                    "word": "t.",
+                    "start": 28.244999999999997,
+                    "end": 28.485
+                  }
+                ]
+              },
+              {
+                "role": "agent",
+                "content": "Thank you for clarifying. So that's M-I-L-K-A Milka, T-O-T Tot? Is that right?",
+                "words": [
+                  {
+                    "word": "Thank ",
+                    "start": 31.107,
+                    "end": 31.328
+                  },
+                  {
+                    "word": "you ",
+                    "start": 31.328,
+                    "end": 31.444
+                  },
+                  {
+                    "word": "for ",
+                    "start": 31.444,
+                    "end": 31.595
+                  },
+                  {
+                    "word": "clarifying.",
+                    "start": 31.595,
+                    "end": 32.384
+                  },
+                  {
+                    "word": " So ",
+                    "start": 32.430208251953125,
+                    "end": 32.58120825195312
+                  },
+                  {
+                    "word": "that's ",
+                    "start": 32.58120825195312,
+                    "end": 32.88320825195313
+                  },
+                  {
+                    "word": "M-I-L-K-A ",
+                    "start": 32.88320825195313,
+                    "end": 33.60320825195313
+                  },
+                  {
+                    "word": "Milka, ",
+                    "start": 33.60320825195313,
+                    "end": 33.98620825195312
+                  },
+                  {
+                    "word": "T-O-T ",
+                    "start": 33.98620825195312,
+                    "end": 34.497208251953126
+                  },
+                  {
+                    "word": "Tot?",
+                    "start": 34.497208251953126,
+                    "end": 35.031208251953124
+                  },
+                  {
+                    "word": " Is ",
+                    "start": 35.077291748046875,
+                    "end": 35.19429174804687
+                  },
+                  {
+                    "word": "that ",
+                    "start": 35.19429174804687,
+                    "end": 35.35629174804688
+                  },
+                  {
+                    "word": "right?",
+                    "start": 35.35629174804688,
+                    "end": 35.77429174804688
+                  }
+                ],
+                "metadata": {
+                  "response_id": 4
+                }
+              },
+              {
+                "role": "user",
+                "content": "Yes?",
+                "words": [
+                  {
+                    "word": "Yes?",
+                    "start": 36.625,
+                    "end": 36.865
+                  }
+                ]
+              },
+              {
+                "role": "agent",
+                "content": "Perfect, thank you Milka. Do you remember which date your appointment is, or even the week or month?",
+                "words": [
+                  {
+                    "word": "Perfect, ",
+                    "start": 38.627,
+                    "end": 39.045
+                  },
+                  {
+                    "word": "thank ",
+                    "start": 39.045,
+                    "end": 39.266
+                  },
+                  {
+                    "word": "you ",
+                    "start": 39.266,
+                    "end": 39.393
+                  },
+                  {
+                    "word": "Milka.",
+                    "start": 39.393,
+                    "end": 40.044
+                  },
+                  {
+                    "word": " Do ",
+                    "start": 40.0785,
+                    "end": 40.2175
+                  },
+                  {
+                    "word": "you ",
+                    "start": 40.2175,
+                    "end": 40.3335
+                  },
+                  {
+                    "word": "remember ",
+                    "start": 40.3335,
+                    "end": 40.6825
+                  },
+                  {
+                    "word": "which ",
+                    "start": 40.6825,
+                    "end": 40.9025
+                  },
+                  {
+                    "word": "date ",
+                    "start": 40.9025,
+                    "end": 41.0885
+                  },
+                  {
+                    "word": "your ",
+                    "start": 41.0885,
+                    "end": 41.2275
+                  },
+                  {
+                    "word": "appointment ",
+                    "start": 41.2275,
+                    "end": 41.6925
+                  },
+                  {
+                    "word": "is, ",
+                    "start": 41.6925,
+                    "end": 41.8895
+                  },
+                  {
+                    "word": "or ",
+                    "start": 41.8895,
+                    "end": 42.0285
+                  },
+                  {
+                    "word": "even ",
+                    "start": 42.0285,
+                    "end": 42.2375
+                  },
+                  {
+                    "word": "the ",
+                    "start": 42.2375,
+                    "end": 42.3425
+                  },
+                  {
+                    "word": "week ",
+                    "start": 42.3425,
+                    "end": 42.5745
+                  },
+                  {
+                    "word": "or ",
+                    "start": 42.5745,
+                    "end": 42.7135
+                  },
+                  {
+                    "word": "month?",
+                    "start": 42.7135,
+                    "end": 43.3405
+                  }
+                ],
+                "metadata": {
+                  "response_id": 6
+                }
+              },
+              {
+                "role": "user",
+                "content": "It was around first week of April.",
+                "words": [
+                  {
+                    "word": "It ",
+                    "start": 44.345,
+                    "end": 44.665
+                  },
+                  {
+                    "word": "was ",
+                    "start": 44.665,
+                    "end": 44.825002999999995
+                  },
+                  {
+                    "word": "around ",
+                    "start": 44.825002999999995,
+                    "end": 45.225
+                  },
+                  {
+                    "word": "first ",
+                    "start": 45.225,
+                    "end": 45.705
+                  },
+                  {
+                    "word": "week ",
+                    "start": 45.705,
+                    "end": 46.025
+                  },
+                  {
+                    "word": "of ",
+                    "start": 46.025,
+                    "end": 46.265
+                  },
+                  {
+                    "word": "April.",
+                    "start": 46.625,
+                    "end": 47.025
+                  }
+                ]
+              },
+              {
+                "role": "agent",
+                "content": "Thank you for sharing that. What service was your appointment for—Brow Sculpt, Cosmetic Tattoo, Lash Lift, or something else?",
+                "words": [
+                  {
+                    "word": "Thank ",
+                    "start": 48.475,
+                    "end": 48.766
+                  },
+                  {
+                    "word": "you ",
+                    "start": 48.766,
+                    "end": 48.905
+                  },
+                  {
+                    "word": "for ",
+                    "start": 48.905,
+                    "end": 49.067
+                  },
+                  {
+                    "word": "sharing ",
+                    "start": 49.067,
+                    "end": 49.439
+                  },
+                  {
+                    "word": "that.",
+                    "start": 49.439,
+                    "end": 49.973
+                  },
+                  {
+                    "word": " What ",
+                    "start": 50.01895825195312,
+                    "end": 50.21695825195312
+                  },
+                  {
+                    "word": "service ",
+                    "start": 50.21695825195312,
+                    "end": 50.529958251953126
+                  },
+                  {
+                    "word": "was ",
+                    "start": 50.529958251953126,
+                    "end": 50.69295825195312
+                  },
+                  {
+                    "word": "your ",
+                    "start": 50.69295825195312,
+                    "end": 50.831958251953125
+                  },
+                  {
+                    "word": "appointment ",
+                    "start": 50.831958251953125,
+                    "end": 51.28495825195313
+                  },
+                  {
+                    "word": "for—Brow ",
+                    "start": 51.28495825195313,
+                    "end": 51.922958251953126
+                  },
+                  {
+                    "word": "Sculpt, ",
+                    "start": 51.922958251953126,
+                    "end": 52.282958251953126
+                  },
+                  {
+                    "word": "Cosmetic ",
+                    "start": 52.282958251953126,
+                    "end": 52.74795825195312
+                  },
+                  {
+                    "word": "Tattoo, ",
+                    "start": 52.74795825195312,
+                    "end": 53.362958251953124
+                  },
+                  {
+                    "word": "Lash ",
+                    "start": 53.362958251953124,
+                    "end": 53.71095825195312
+                  },
+                  {
+                    "word": "Lift, ",
+                    "start": 53.71095825195312,
+                    "end": 53.977958251953126
+                  },
+                  {
+                    "word": "or ",
+                    "start": 53.977958251953126,
+                    "end": 54.09495825195312
+                  },
+                  {
+                    "word": "something ",
+                    "start": 54.09495825195312,
+                    "end": 54.48895825195312
+                  },
+                  {
+                    "word": "else?",
+                    "start": 54.48895825195312,
+                    "end": 55.03495825195313
+                  }
+                ],
+                "metadata": {
+                  "response_id": 7
+                }
+              },
+              {
+                "role": "user",
+                "content": "I really don't know about that.",
+                "words": [
+                  {
+                    "word": "I ",
+                    "start": 56.725,
+                    "end": 57.045
+                  },
+                  {
+                    "word": "really ",
+                    "start": 57.045,
+                    "end": 57.365
+                  },
+                  {
+                    "word": "don't ",
+                    "start": 57.365,
+                    "end": 57.604998
+                  },
+                  {
+                    "word": "know ",
+                    "start": 57.604998,
+                    "end": 57.764998
+                  },
+                  {
+                    "word": "about ",
+                    "start": 57.764998,
+                    "end": 57.925
+                  },
+                  {
+                    "word": "that.",
+                    "start": 57.925,
+                    "end": 58.085
+                  }
+                ]
+              },
+              {
+                "role": "agent",
+                "content": "No worries at all, Milka. May I please have your phone number so I can search for your booking?",
+                "words": [
+                  {
+                    "word": "No ",
+                    "start": 59.616,
+                    "end": 59.813
+                  },
+                  {
+                    "word": "worries ",
+                    "start": 59.813,
+                    "end": 60.115
+                  },
+                  {
+                    "word": "at ",
+                    "start": 60.115,
+                    "end": 60.196
+                  },
+                  {
+                    "word": "all, ",
+                    "start": 60.196,
+                    "end": 60.371
+                  },
+                  {
+                    "word": "Milka.",
+                    "start": 60.371,
+                    "end": 60.94
+                  },
+                  {
+                    "word": " May ",
+                    "start": 60.9855,
+                    "end": 61.2065
+                  },
+                  {
+                    "word": "I ",
+                    "start": 61.2065,
+                    "end": 61.2995
+                  },
+                  {
+                    "word": "please ",
+                    "start": 61.2995,
+                    "end": 61.5665
+                  },
+                  {
+                    "word": "have ",
+                    "start": 61.5665,
+                    "end": 61.7285
+                  },
+                  {
+                    "word": "your ",
+                    "start": 61.7285,
+                    "end": 61.8685
+                  },
+                  {
+                    "word": "phone ",
+                    "start": 61.8685,
+                    "end": 62.1125
+                  },
+                  {
+                    "word": "number ",
+                    "start": 62.1125,
+                    "end": 62.4025
+                  },
+                  {
+                    "word": "so ",
+                    "start": 62.4025,
+                    "end": 62.5415
+                  },
+                  {
+                    "word": "I ",
+                    "start": 62.5415,
+                    "end": 62.6115
+                  },
+                  {
+                    "word": "can ",
+                    "start": 62.6115,
+                    "end": 62.7735
+                  },
+                  {
+                    "word": "search ",
+                    "start": 62.7735,
+                    "end": 63.0405
+                  },
+                  {
+                    "word": "for ",
+                    "start": 63.0405,
+                    "end": 63.1805
+                  },
+                  {
+                    "word": "your ",
+                    "start": 63.1805,
+                    "end": 63.3195
+                  },
+                  {
+                    "word": "booking?",
+                    "start": 63.3195,
+                    "end": 63.8655
+                  }
+                ],
+                "metadata": {
+                  "response_id": 8
+                }
+              },
+              {
+                "role": "user",
+                "content": "Zero four nine five two three five four Two two.",
+                "words": [
+                  {
+                    "word": "Zero ",
+                    "start": 65.485,
+                    "end": 65.805
+                  },
+                  {
+                    "word": "four ",
+                    "start": 65.805,
+                    "end": 66.044997
+                  },
+                  {
+                    "word": "nine ",
+                    "start": 66.044997,
+                    "end": 66.285
+                  },
+                  {
+                    "word": "five ",
+                    "start": 66.285,
+                    "end": 66.44500000000001
+                  },
+                  {
+                    "word": "two ",
+                    "start": 66.44500000000001,
+                    "end": 66.685
+                  },
+                  {
+                    "word": "three ",
+                    "start": 66.685,
+                    "end": 66.924998
+                  },
+                  {
+                    "word": "five ",
+                    "start": 66.924998,
+                    "end": 67.165
+                  },
+                  {
+                    "word": "four ",
+                    "start": 67.165,
+                    "end": 67.324995
+                  },
+                  {
+                    "word": "Two ",
+                    "start": 68.615004,
+                    "end": 68.935
+                  },
+                  {
+                    "word": "two.",
+                    "start": 68.935,
+                    "end": 69.17500000000001
+                  }
+                ]
+              },
+              {
+                "role": "agent",
+                "content": "Let me confirm: zero... four... nine... five... two... three... five... four... two... two. Correct?",
+                "words": [
+                  {
+                    "word": "Let ",
+                    "start": 72.516,
+                    "end": 72.667
+                  },
+                  {
+                    "word": "me ",
+                    "start": 72.667,
+                    "end": 72.771
+                  },
+                  {
+                    "word": "confirm: ",
+                    "start": 72.771,
+                    "end": 73.282
+                  },
+                  {
+                    "word": "zero...",
+                    "start": 73.282,
+                    "end": 73.956
+                  },
+                  {
+                    "word": " four...",
+                    "start": 74.0015,
+                    "end": 74.5595
+                  },
+                  {
+                    "word": " nine...",
+                    "start": 74.60520825195313,
+                    "end": 75.11620825195313
+                  },
+                  {
+                    "word": " five...",
+                    "start": 75.1285,
+                    "end": 75.6735
+                  },
+                  {
+                    "word": " two...",
+                    "start": 75.71979174804687,
+                    "end": 76.13779174804688
+                  },
+                  {
+                    "word": " three...",
+                    "start": 76.18420825195312,
+                    "end": 76.69520825195312
+                  },
+                  {
+                    "word": " five...",
+                    "start": 76.7415,
+                    "end": 77.3455
+                  },
+                  {
+                    "word": " four...",
+                    "start": 77.36866674804688,
+                    "end": 77.90266674804687
+                  },
+                  {
+                    "word": " two...",
+                    "start": 77.92595825195312,
+                    "end": 78.55295825195313
+                  },
+                  {
+                    "word": " two.",
+                    "start": 78.599125,
+                    "end": 79.110125
+                  },
+                  {
+                    "word": " Correct?",
+                    "start": 79.14541674804687,
+                    "end": 79.76041674804688
+                  }
+                ],
+                "metadata": {
+                  "response_id": 10
+                }
+              },
+              {
+                "role": "user",
+                "content": "Yes.",
+                "words": [
+                  {
+                    "word": "Yes.",
+                    "start": 80.595,
+                    "end": 80.915
+                  }
+                ]
+              },
+              {
+                "role": "tool_call_invocation",
+                "tool_call_id": "a1228d343307d6b1",
+                "name": "Appointment_manger",
+                "arguments": "{\"preferred_time\":null,\"note\":null,\"notes\":null,\"phone\":\"0495235422\",\"service_name\":null,\"service\":null,\"action\":\"get_client_bookings\",\"client_name\":\"Milka Tot\",\"branch\":\"Toorak\",\"email\":null,\"specialist_preference\":null,\"preferred_date\":\"Wednesday 1st April 2026\"}",
+                "time_sec": 86.722,
+                "type": "custom"
+              },
+              {
+                "role": "tool_call_result",
+                "tool_call_id": "a1228d343307d6b1",
+                "successful": true,
+                "content": "{\"output\":\"I found an existing booking for Milka Tot:\\n\\n- Service: Cosmetic Tattoo BROWS by SUZIE\\n- Date & Time: Thursday, 2nd April 2026 at 2:00pm\\n- Status: Confirmed\\n\\nIf you would like to confirm details, reschedule, or add any notes to this booking, please let me know how I can assist further.\"}",
+                "time_sec": 93.727
+              },
+              {
+                "role": "agent",
+                "content": "Milka, I found your booking for Cosmetic Tattoo Brows with Suzie on Thursday, 2nd April 2026 at 2:00pm. Is there anything else I can assist you with regarding this appointment?",
+                "words": [
+                  {
+                    "word": "Milka, ",
+                    "start": 95.623,
+                    "end": 95.936
+                  },
+                  {
+                    "word": "I ",
+                    "start": 95.936,
+                    "end": 96.053
+                  },
+                  {
+                    "word": "found ",
+                    "start": 96.053,
+                    "end": 96.25
+                  },
+                  {
+                    "word": "your ",
+                    "start": 96.25,
+                    "end": 96.412
+                  },
+                  {
+                    "word": "booking ",
+                    "start": 96.412,
+                    "end": 96.726
+                  },
+                  {
+                    "word": "for ",
+                    "start": 96.726,
+                    "end": 96.9
+                  },
+                  {
+                    "word": "Cosmetic ",
+                    "start": 96.9,
+                    "end": 97.353
+                  },
+                  {
+                    "word": "Tattoo ",
+                    "start": 97.353,
+                    "end": 97.643
+                  },
+                  {
+                    "word": "Brows ",
+                    "start": 97.643,
+                    "end": 97.864
+                  },
+                  {
+                    "word": "with ",
+                    "start": 97.864,
+                    "end": 98.015
+                  },
+                  {
+                    "word": "Suzie ",
+                    "start": 98.015,
+                    "end": 98.398
+                  },
+                  {
+                    "word": "on ",
+                    "start": 98.398,
+                    "end": 98.56
+                  },
+                  {
+                    "word": "Thursday, ",
+                    "start": 98.56,
+                    "end": 99.001
+                  },
+                  {
+                    "word": "2nd ",
+                    "start": 99.001,
+                    "end": 99.118
+                  },
+                  {
+                    "word": "April ",
+                    "start": 99.118,
+                    "end": 99.454
+                  },
+                  {
+                    "word": "2026 ",
+                    "start": 99.454,
+                    "end": 99.57
+                  },
+                  {
+                    "word": "at ",
+                    "start": 99.57,
+                    "end": 99.954
+                  },
+                  {
+                    "word": "2:00pm.",
+                    "start": 99.954,
+                    "end": 100.255
+                  },
+                  {
+                    "word": " Is ",
+                    "start": 101.82225,
+                    "end": 101.98525
+                  },
+                  {
+                    "word": "there ",
+                    "start": 101.98525,
+                    "end": 102.14825
+                  },
+                  {
+                    "word": "anything ",
+                    "start": 102.14825,
+                    "end": 102.42625
+                  },
+                  {
+                    "word": "else ",
+                    "start": 102.42625,
+                    "end": 102.62425
+                  },
+                  {
+                    "word": "I ",
+                    "start": 102.62425,
+                    "end": 102.68225
+                  },
+                  {
+                    "word": "can ",
+                    "start": 102.68225,
+                    "end": 102.85625
+                  },
+                  {
+                    "word": "assist ",
+                    "start": 102.85625,
+                    "end": 103.18125
+                  },
+                  {
+                    "word": "you ",
+                    "start": 103.18125,
+                    "end": 103.33225
+                  },
+                  {
+                    "word": "with ",
+                    "start": 103.33225,
+                    "end": 103.55225
+                  },
+                  {
+                    "word": "regarding ",
+                    "start": 103.55225,
+                    "end": 103.95925
+                  },
+                  {
+                    "word": "this ",
+                    "start": 103.95925,
+                    "end": 104.12125
+                  },
+                  {
+                    "word": "appointment?",
+                    "start": 104.12125,
+                    "end": 104.79525
+                  }
+                ],
+                "metadata": {
+                  "response_id": 11
+                }
+              },
+              {
+                "role": "user",
+                "content": "I could be running late for this.",
+                "words": [
+                  {
+                    "word": "I ",
+                    "start": 105.95500000000001,
+                    "end": 106.195006
+                  },
+                  {
+                    "word": "could ",
+                    "start": 106.195006,
+                    "end": 106.515005
+                  },
+                  {
+                    "word": "be ",
+                    "start": 106.515005,
+                    "end": 106.75500000000001
+                  },
+                  {
+                    "word": "running ",
+                    "start": 106.75500000000001,
+                    "end": 107.155005
+                  },
+                  {
+                    "word": "late ",
+                    "start": 107.155005,
+                    "end": 107.47500500000001
+                  },
+                  {
+                    "word": "for ",
+                    "start": 107.47500500000001,
+                    "end": 107.715
+                  },
+                  {
+                    "word": "this.",
+                    "start": 107.715,
+                    "end": 107.95500000000001
+                  }
+                ]
+              },
+              {
+                "role": "user",
+                "content": "By seventeen minutes.",
+                "words": [
+                  {
+                    "word": "By ",
+                    "start": 109.715,
+                    "end": 110.19500000000001
+                  },
+                  {
+                    "word": "seventeen ",
+                    "start": 110.19500000000001,
+                    "end": 110.595
+                  },
+                  {
+                    "word": "minutes.",
+                    "start": 110.595,
+                    "end": 110.915
+                  }
+                ]
+              },
+              {
+                "role": "tool_call_invocation",
+                "tool_call_id": "153962d780b39dac",
+                "name": "Appointment_manger",
+                "arguments": "{\"preferred_time\":\"Thursday 2nd April 2026 at 2:00pm\",\"note\":\"Running late by 17 minutes - noted at 5:58am\",\"notes\":null,\"phone\":\"0495235422\",\"service_name\":null,\"service\":null,\"action\":\"update_booking_notes\",\"client_name\":\"Milka Tot\",\"branch\":\"Toorak\",\"email\":null,\"specialist_preference\":null,\"preferred_date\":null}",
+                "time_sec": 113.172,
+                "type": "custom"
+              }
+            ],
+            "latency": {},
+            "call_cost": {
+              "product_costs": [],
+              "total_duration_unit_price": 0,
+              "total_duration_seconds": 0,
+              "combined_cost": 0
+            },
+            "data_storage_setting": "everything",
+            "opt_in_signed_url": false,
+            "access_token": "eyJhbGciOiJIUzI1NiJ9.eyJ2aWRlbyI6eyJyb29tSm9pbiI6dHJ1ZSwicm9vbSI6IndlYl9jYWxsX2NlN2I5MTVhNTBiNDZmOGRlYTEyNjA4YWUyNiJ9LCJpc3MiOiJBUEl3UkNGdVBCYXdtMmgiLCJleHAiOjE3NzA3NTAzNTEsIm5iZiI6MCwic3ViIjoiY2xpZW50In0.JZfLWPANJ-U9mSJVDjJ7gVyupU2OOd6kJGl-3jCqgok"
+          },
+          "name": "Appointment_manger",
+          "args": {
+            "preferred_time": "Thursday 2nd April 2026 at 2:00pm",
+            "note": "Running late by 17 minutes - noted at 5:58am",
+            "notes": null,
+            "phone": "0495235422",
+            "service_name": null,
+            "service": null,
+            "action": "update_booking_notes",
+            "client_name": "Milka Tot",
+            "branch": "Toorak",
+            "email": null,
+            "specialist_preference": null,
+            "preferred_date": null
+          }
+        },
+        "webhookUrl": "https://janitb.app.n8n.cloud/webhook/salon-receptionist",
+        "executionMode": "production"
+      }
+    ]
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e774bb6ace5c8f6ca3e88e664df143fe052b3c348ff18d70a8b154d190245c96"
+  }
+}
